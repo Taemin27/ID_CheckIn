@@ -30,6 +30,9 @@ android {
     kotlinOptions {
         jvmTarget = '1.8'
     }
+    buildFeatures {
+        viewBinding true
+    }
 }
 
 dependencies {
@@ -42,14 +45,17 @@ dependencies {
     androidTestImplementation 'androidx.test.ext:junit:1.1.5'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.5.1'
 
+
+
+
     // Extra Implementations
+
+    // ML Kit Barcode Model
+    implementation 'com.google.mlkit:barcode-scanning:17.2.0'
 
     // ViewModel and LiveData
     implementation "androidx.lifecycle:lifecycle-livedata:2.2.0"
     implementation "androidx.lifecycle:lifecycle-viewmodel:2.2.0"
-
-    // Barcode model
-    implementation 'com.google.mlkit:barcode-scanning:17.2.0'
 
     // CameraX
     implementation "androidx.camera:camera-camera2:1.0.0-beta06"

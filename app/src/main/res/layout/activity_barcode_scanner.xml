@@ -6,4 +6,26 @@
     android:layout_height="match_parent"
     tools:context=".BarcodeScannerActivity">
 
+    <Button
+        android:id="@+id/button_back"
+        style="@style/ButtonTransparent"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:text="Back"
+        android:textAlignment="viewStart"
+        android:textSize="14sp"
+        app:icon="?attr/actionModeCloseDrawable"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/button_back" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

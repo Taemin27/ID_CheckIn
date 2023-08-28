@@ -7,4 +7,11 @@
         <item name="rippleColor">?attr/colorPrimaryDark</item>
     </style>
 
+    <style name="ButtonTransparent">
+        <item name="android:background">@android:color/transparent</item>
+        <item name="iconTint">?attr/colorOnBackground</item>
+        <item name="android:textColor">?attr/colorOnBackground</item>
+        <item name="rippleColor">@android:color/transparent</item>
+    </style>
+
 </resources>

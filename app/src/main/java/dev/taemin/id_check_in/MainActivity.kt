@@ -1,10 +1,9 @@
 package dev.taemin.id_check_in
 
+import android.content.Intent
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.util.Log
-import android.widget.Toast
-import androidx.activity.result.contract.ActivityResultContracts
+import android.widget.Button
 
 
 class MainActivity : AppCompatActivity() {
@@ -12,23 +11,15 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
+        val btn_launchScanner = findViewById<Button>(R.id.button_launchScanner)
 
-        val requestMultiplePermissions = registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()
-        ) { permissions ->
-            permissions.entries.forEach {
-                Log.d("DEBUG", "${it.key} = ${it.value}")
+        btn_launchScanner.setOnClickListener {
+            val intent = Intent(this, BarcodeScannerActivity::class.java)
+            intent.apply {
+
             }
+            startActivity(intent)
         }
 
-        requestMultiplePermissions.launch(
-            arrayOf(
-                android.Manifest.permission.CAMERA,
-                android.hardware.camera.any
-            )
-        )
     }
-
-
-
 }
