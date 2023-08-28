@@ -2,6 +2,9 @@ package dev.taemin.id_check_in
 
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
+import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContracts
 
 
 class MainActivity : AppCompatActivity() {
@@ -9,9 +12,23 @@ class MainActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        fun launchScanner() {
 
+        val requestMultiplePermissions = registerForActivityResult(
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissions ->
+            permissions.entries.forEach {
+                Log.d("DEBUG", "${it.key} = ${it.value}")
+            }
         }
+
+        requestMultiplePermissions.launch(
+            arrayOf(
+                android.Manifest.permission.CAMERA,
+                android.hardware.camera.any
+            )
+        )
     }
+
+
 
 }

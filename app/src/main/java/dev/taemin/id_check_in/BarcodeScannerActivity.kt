@@ -10,10 +10,6 @@ class BarcodeScannerActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_barcode_scanner)
 
-        val options = BarcodeScannerOptions.Builder()
-            .setBarcodeFormats(
-                Barcode.FORMAT_QR_CODE,
-                Barcode.FORMAT_AZTEC)
-            .build()
+        val options = BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE, Barcode.FORMAT_AZTEC).build()
     }
 }
