@@ -5,13 +5,14 @@ import android.content.pm.PackageManager.PERMISSION_GRANTED
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.util.Log
-import android.widget.Button
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.camera.core.CameraSelector
 import androidx.camera.core.Preview
 import androidx.core.content.ContextCompat
 import androidx.camera.lifecycle.ProcessCameraProvider
+import com.google.mlkit.vision.barcode.BarcodeScannerOptions
+import com.google.mlkit.vision.barcode.common.Barcode
 import dev.taemin.id_check_in.databinding.ActivityBarcodeScannerBinding
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
@@ -21,6 +22,18 @@ class BarcodeScannerActivity : AppCompatActivity() {
     private lateinit var binding : ActivityBarcodeScannerBinding
     private lateinit var cameraExecutor : ExecutorService
 
+    val options = BarcodeScannerOptions.Builder().setBarcodeFormats(
+        Barcode.FORMAT_CODE_128,
+        Barcode.FORMAT_CODE_39,
+        Barcode.FORMAT_CODE_93,
+        Barcode.FORMAT_EAN_8,
+        Barcode.FORMAT_EAN_13,
+        Barcode.FORMAT_QR_CODE,
+        Barcode.FORMAT_UPC_A,
+        Barcode.FORMAT_UPC_E,
+        Barcode.FORMAT_PDF417
+    ).build()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityBarcodeScannerBinding.inflate(layoutInflater, null, false)
@@ -29,21 +42,26 @@ class BarcodeScannerActivity : AppCompatActivity() {
 
         requestPermission()
 
-        val btn_back = findViewById<Button>(R.id.button_back)
+        val btn_back = binding.buttonBack
         btn_back.setOnClickListener {
-            val intent = Intent(this, MainActivity::class.java)
-            intent.apply {
-
-            }
-            startActivity(intent)
+            backToMain()
         }
+    }
+
+    private fun backToMain() {
+        val intent = Intent(this, MainActivity::class.java)
+        intent.apply {
+
+        }
+        startActivity(intent)
     }
     private fun requestPermission() {
         requestCameraPermissionIfMissing { granted ->
             if(granted) {
-                startCamera()
+                //startCamera()
             } else {
                 Toast.makeText(this, "Please Allow the Permission", Toast.LENGTH_LONG).show()
+                backToMain()
             }
         }
     }
@@ -56,7 +74,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
             }.launch(android.Manifest.permission.CAMERA)
         }
     }
-    private fun startCamera() {
+    /*private fun startCamera() {
         val processCameraProvider = ProcessCameraProvider.getInstance(this)
         processCameraProvider.addListener({
             try{
@@ -71,8 +89,8 @@ class BarcodeScannerActivity : AppCompatActivity() {
             }
         }, ContextCompat.getMainExecutor(this))
     }
-
     fun buildPreviewUseCase(): Preview {
         return Preview.Builder().build().also { it.setSurfaceProvider(binding.previewView.createSurfaceProvider())}
-    }
+    }*/
+
 }
