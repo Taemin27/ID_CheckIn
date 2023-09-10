@@ -86,6 +86,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
 
         builder.show()
     }
+
     private fun writeToSheets(id: Int) {
         val cache = DiskBasedCache(cacheDir, 1024 * 1024)
 
@@ -94,7 +95,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
         val requestQueue = RequestQueue(cache, network).apply {
             start()
         }
-        val url: String = "https://script.google.com/macros/s/AKfycbzBQe1rwRHrZUP13d9byf1667ZduoKxhcOQTA6YaTdT6-VisPAplB7AIgNwnEWrwMo/exec"
+        val url: String = "https://script.google.com/macros/s/AKfycbyed8Zqtsl0LFR4k6PEty16CHuMH4I59YPjRZzvCJpDL2z64lMXm6yIKq_KyEfNpy4/exec"
 
         val stringRequest = object : StringRequest(Request.Method.POST, url, Response.Listener { response ->
 
@@ -113,8 +114,11 @@ class BarcodeScannerActivity : AppCompatActivity() {
                 return params
             }
         }
-
         requestQueue.add(stringRequest)
+    }
+
+    private fun getName(id: Int) {
+
     }
 
     private fun startCamera() {
