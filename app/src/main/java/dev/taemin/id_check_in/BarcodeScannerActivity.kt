@@ -1,13 +1,10 @@
 package dev.taemin.id_check_in
 
-import android.R
 import android.annotation.SuppressLint
-import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.os.Bundle
-import android.util.Log
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -34,7 +31,6 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import dev.taemin.id_check_in.databinding.ActivityBarcodeScannerBinding
-import java.text.NumberFormat
 import java.util.concurrent.Executors
 
 
@@ -57,6 +53,17 @@ class BarcodeScannerActivity : AppCompatActivity() {
         }
 
         requestPermission()
+    }
+
+    private fun backToMain() {
+        val intent = Intent(this, MainActivity::class.java)
+        intent.apply {
+
+        }
+        startActivity(intent)
+    }
+    private fun typeIDNum() {
+
     }
 
     @SuppressLint("RestrictedApi")
@@ -87,7 +94,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
         val requestQueue = RequestQueue(cache, network).apply {
             start()
         }
-        val url: String = "https://script.google.com/macros/s/AKfycbypEGdRRrxMgyXQ1B1bAd44GjDmDWfIJvbVZNXc-KYwkgEcggu-cWUsyzXm7Oggtgw/exec"
+        val url: String = "https://script.google.com/macros/s/AKfycbzBQe1rwRHrZUP13d9byf1667ZduoKxhcOQTA6YaTdT6-VisPAplB7AIgNwnEWrwMo/exec"
 
         val stringRequest = object : StringRequest(Request.Method.POST, url, Response.Listener { response ->
 
@@ -98,8 +105,9 @@ class BarcodeScannerActivity : AppCompatActivity() {
             override fun getParams(): MutableMap<String, String> {
                 var params = HashMap<String, String>()
 
-                params.put("name", "Student_Name")
+                params.put("action", "addItem")
                 params.put("id", id.toString())
+                params.put("name", "Student_Name")
                 params.put("email", "Student_Email")
 
                 return params
@@ -187,16 +195,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
         }
     }
 
-    private fun typeIDNum() {
 
-    }
-    private fun backToMain() {
-        val intent = Intent(this, MainActivity::class.java)
-        intent.apply {
-
-        }
-        startActivity(intent)
-    }
     private fun requestPermission() {
         requestCameraPermissionIfMissing { granted ->
             if(granted) {
