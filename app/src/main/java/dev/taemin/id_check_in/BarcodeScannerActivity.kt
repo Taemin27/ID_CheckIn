@@ -101,7 +101,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
 
         },
         Response.ErrorListener {error ->  
-            Toast.makeText(this, "Error while writing to Spreadsheet.", Toast.LENGTH_LONG)
+            Toast.makeText(this, "Error while writing to Spreadsheet.", Toast.LENGTH_LONG).show()
         }) {
             override fun getParams(): MutableMap<String, String> {
                 var params = HashMap<String, String>()
@@ -117,8 +117,32 @@ class BarcodeScannerActivity : AppCompatActivity() {
         requestQueue.add(stringRequest)
     }
 
-    private fun getName(id: Int) {
+    private fun getName(id: Int){
+        val cache = DiskBasedCache(cacheDir, 1024 * 1024)
 
+        val network = BasicNetwork(HurlStack())
+
+        val requestQueue = RequestQueue(cache, network).apply {
+            start()
+        }
+        val url: String = "https://script.google.com/macros/s/AKfycbyed8Zqtsl0LFR4k6PEty16CHuMH4I59YPjRZzvCJpDL2z64lMXm6yIKq_KyEfNpy4/exec"
+
+        val stringRequest = object : StringRequest(Request.Method.GET, url, Response.Listener { response ->
+            
+        },
+            Response.ErrorListener {error ->
+                Toast.makeText(this, "Error while writing to Spreadsheet.", Toast.LENGTH_LONG).show()
+            }) {
+            override fun getParams(): MutableMap<String, String> {
+                var params = HashMap<String, String>()
+
+                params.put("action", "getName")
+                params.put("id", id.toString())
+
+                return params
+            }
+        }
+        requestQueue.add(stringRequest)
     }
 
     private fun startCamera() {
