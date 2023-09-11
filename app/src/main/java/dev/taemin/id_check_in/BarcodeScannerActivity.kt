@@ -1,10 +1,15 @@
 package dev.taemin.id_check_in
 
 import android.annotation.SuppressLint
+import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
+import android.content.SharedPreferences
 import android.content.pm.PackageManager.PERMISSION_GRANTED
 import android.os.Bundle
+import android.view.View
+import android.widget.Button
+import android.widget.EditText
 import android.widget.Toast
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AlertDialog
@@ -24,6 +29,7 @@ import com.android.volley.toolbox.BasicNetwork
 import com.android.volley.toolbox.DiskBasedCache
 import com.android.volley.toolbox.HurlStack
 import com.android.volley.toolbox.StringRequest
+import com.google.android.gms.tasks.Tasks.await
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -31,6 +37,9 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import dev.taemin.id_check_in.databinding.ActivityBarcodeScannerBinding
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 
 
@@ -45,7 +54,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
         // Back button listener
         val btn_back = binding.buttonBack
         btn_back.setOnClickListener {
-            backToMain()
+            passwordDialog()
         }
         val btn_typeID = binding.buttonTypeID
         btn_typeID.setOnClickListener{
@@ -55,6 +64,10 @@ class BarcodeScannerActivity : AppCompatActivity() {
         requestPermission()
     }
 
+    private fun typeIDNum() {
+
+    }
+
     private fun backToMain() {
         val intent = Intent(this, MainActivity::class.java)
         intent.apply {
@@ -62,32 +75,79 @@ class BarcodeScannerActivity : AppCompatActivity() {
         }
         startActivity(intent)
     }
-    private fun typeIDNum() {
 
+    @SuppressLint("RestrictedApi")
+    private fun passwordDialog() {
+        val dialogView: View = layoutInflater.inflate(R.layout.activity_returnpassworddialog, null)
+        val builder: AlertDialog.Builder = AlertDialog.Builder(dialogView.context)
+
+        builder.setView(dialogView)
+        builder.setCancelable(false)
+        val dialog = builder.create()
+
+        CameraX.unbindAll()
+
+        dialog.show()
+
+        val spref : SharedPreferences = getSharedPreferences("pref", MODE_PRIVATE);
+
+        val editTxt_returnPassword = dialogView.findViewById<EditText>(R.id.editText_inputPassword)
+
+        val btn_enter = dialogView.findViewById<Button>(R.id.button_enter)
+        btn_enter.setOnClickListener {
+            if(editTxt_returnPassword.text.toString() == spref.getString("returnPassword", "")) {
+                backToMain()
+                dialog.dismiss()
+            } else {
+                Toast.makeText(this, "Wrong Password!", Toast.LENGTH_LONG).show()
+                editTxt_returnPassword.setText("")
+            }
+        }
+
+        val btn_cancel = dialogView.findViewById<Button>(R.id.button_cancel)
+        btn_cancel.setOnClickListener {
+            startCamera()
+            dialog.dismiss()
+        }
     }
 
     @SuppressLint("RestrictedApi")
     private fun confirmCheckIn(ID: Int) {
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+        builder.setCancelable(false)
 
         CameraX.unbindAll()
 
-        builder.setTitle("Is this you?")
-        builder.setMessage("Student_name\n" + ID.toString() + "\nStudent_Email")
+        var name = getName(ID)
 
-        builder.setPositiveButton("Check-In", DialogInterface.OnClickListener() { dialog, id ->
-            writeToSheets(ID)
-            startCamera()
-        })
+        var email = getEmail(ID)
 
-        builder.setNegativeButton("Rescan", DialogInterface.OnClickListener() { dialog, id ->
-            startCamera()
-        })
+        if(name == "No Match") {
+
+            builder.setTitle("No Match Found")
+            builder.setMessage("Please try scanning again.")
+
+            builder.setPositiveButton("Rescan", DialogInterface.OnClickListener() { dialog, id ->
+                startCamera()
+            })
+        } else {
+            builder.setTitle("Is this you?")
+            builder.setMessage("$name\n" + ID.toString() + "\n$email")
+
+            builder.setPositiveButton("Check-In", DialogInterface.OnClickListener() { dialog, id ->
+                writeToSheets(ID, name, email)
+                startCamera()
+            })
+
+            builder.setNegativeButton("Rescan", DialogInterface.OnClickListener() { dialog, id ->
+                startCamera()
+            })
+        }
 
         builder.show()
     }
 
-    private fun writeToSheets(id: Int) {
+    private fun writeToSheets(id: Int, name: String, email: String) {
         val cache = DiskBasedCache(cacheDir, 1024 * 1024)
 
         val network = BasicNetwork(HurlStack())
@@ -95,8 +155,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
         val requestQueue = RequestQueue(cache, network).apply {
             start()
         }
-        val url: String = "https://script.google.com/macros/s/AKfycbyed8Zqtsl0LFR4k6PEty16CHuMH4I59YPjRZzvCJpDL2z64lMXm6yIKq_KyEfNpy4/exec"
-
+        val url: String = "https://script.google.com/macros/s/AKfycbzLnC6lW5p6erbvn1rK8eu2JzmGZGl8cfVwqagunlvshpeVajYviTgp8eiwGKtGLKk/exec"
         val stringRequest = object : StringRequest(Request.Method.POST, url, Response.Listener { response ->
 
         },
@@ -108,8 +167,8 @@ class BarcodeScannerActivity : AppCompatActivity() {
 
                 params.put("action", "addItem")
                 params.put("id", id.toString())
-                params.put("name", "Student_Name")
-                params.put("email", "Student_Email")
+                params.put("name", name)
+                params.put("email", email)
 
                 return params
             }
@@ -117,7 +176,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
         requestQueue.add(stringRequest)
     }
 
-    private fun getName(id: Int){
+    private fun getName(id: Int): String {
         val cache = DiskBasedCache(cacheDir, 1024 * 1024)
 
         val network = BasicNetwork(HurlStack())
@@ -125,10 +184,13 @@ class BarcodeScannerActivity : AppCompatActivity() {
         val requestQueue = RequestQueue(cache, network).apply {
             start()
         }
-        val url: String = "https://script.google.com/macros/s/AKfycbyed8Zqtsl0LFR4k6PEty16CHuMH4I59YPjRZzvCJpDL2z64lMXm6yIKq_KyEfNpy4/exec"
+        val url: String = "https://script.google.com/macros/s/AKfycbymQ3_1xt6M9tZKhAhEikeNHp6fkoQtE_dCLHHdm7vj0TWUFauCpwk6-huAfYrFIZM/exec"
 
+
+        var name = ""
         val stringRequest = object : StringRequest(Request.Method.GET, url, Response.Listener { response ->
-            
+            name = response
+
         },
             Response.ErrorListener {error ->
                 Toast.makeText(this, "Error while writing to Spreadsheet.", Toast.LENGTH_LONG).show()
@@ -143,6 +205,39 @@ class BarcodeScannerActivity : AppCompatActivity() {
             }
         }
         requestQueue.add(stringRequest)
+        return name
+    }
+
+    private fun getEmail(id: Int): String {
+        val cache = DiskBasedCache(cacheDir, 1024 * 1024)
+
+        val network = BasicNetwork(HurlStack())
+
+        val requestQueue = RequestQueue(cache, network).apply {
+            start()
+        }
+        val url: String = "https://script.google.com/macros/s/AKfycbymQ3_1xt6M9tZKhAhEikeNHp6fkoQtE_dCLHHdm7vj0TWUFauCpwk6-huAfYrFIZM/exec"
+
+        var email = ""
+
+        val stringRequest = object : StringRequest(Request.Method.GET, url, Response.Listener { response ->
+            email = response
+
+        },
+            Response.ErrorListener {error ->
+                Toast.makeText(this, "Error while writing to Spreadsheet.", Toast.LENGTH_LONG).show()
+            }) {
+            override fun getParams(): MutableMap<String, String> {
+                var params = HashMap<String, String>()
+
+                params.put("action", "getEmail")
+                params.put("id", id.toString())
+
+                return params
+            }
+        }
+        requestQueue.add(stringRequest)
+        return email
     }
 
     private fun startCamera() {
