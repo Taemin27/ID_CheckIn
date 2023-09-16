@@ -1,7 +1,6 @@
 package dev.taemin.id_check_in
 
 import android.annotation.SuppressLint
-import android.app.Dialog
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.SharedPreferences
@@ -29,7 +28,6 @@ import com.android.volley.toolbox.BasicNetwork
 import com.android.volley.toolbox.DiskBasedCache
 import com.android.volley.toolbox.HurlStack
 import com.android.volley.toolbox.StringRequest
-import com.google.android.gms.tasks.Tasks.await
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -37,15 +35,14 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import dev.taemin.id_check_in.databinding.ActivityBarcodeScannerBinding
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import java.util.concurrent.Executors
 
 
 class BarcodeScannerActivity : AppCompatActivity() {
     private lateinit var binding: ActivityBarcodeScannerBinding
     private lateinit var cameraProviderFuture : ListenableFuture<ProcessCameraProvider>
+
+    val scriptURL = "https://script.google.com/macros/s/AKfycbwj9QfAvOu7oX_NmXK9HT_eaBjJci3NZmYmvz7QDcOPqWPa8kepOjwesTvf916TDgA/exec"
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityBarcodeScannerBinding.inflate(layoutInflater)
@@ -111,19 +108,11 @@ class BarcodeScannerActivity : AppCompatActivity() {
         }
     }
 
-    @SuppressLint("RestrictedApi")
-    private fun confirmCheckIn(ID: Int) {
+    private fun checkInDialog(ID: Int, details: String) {
         val builder: AlertDialog.Builder = AlertDialog.Builder(this)
         builder.setCancelable(false)
 
-        CameraX.unbindAll()
-
-        var name = getName(ID)
-
-        var email = getEmail(ID)
-
-        if(name == "No Match") {
-
+        if(details == "No Match") {
             builder.setTitle("No Match Found")
             builder.setMessage("Please try scanning again.")
 
@@ -131,6 +120,9 @@ class BarcodeScannerActivity : AppCompatActivity() {
                 startCamera()
             })
         } else {
+            var name = details.split(":")[0]
+            var email = details.split(":")[1]
+
             builder.setTitle("Is this you?")
             builder.setMessage("$name\n" + ID.toString() + "\n$email")
 
@@ -147,6 +139,32 @@ class BarcodeScannerActivity : AppCompatActivity() {
         builder.show()
     }
 
+    private fun getDetails(id: Int) {
+        val cache = DiskBasedCache(cacheDir, 1024 * 1024)
+        val network = BasicNetwork(HurlStack())
+        val requestQueue = RequestQueue(cache, network).apply {
+            start()
+        }
+
+        val stringRequest = object : StringRequest(Request.Method.GET, scriptURL, Response.Listener { response ->
+            Toast.makeText(this, response, Toast.LENGTH_LONG).show()
+            //checkInDialog(id, response)
+        },
+            Response.ErrorListener {error ->
+                Toast.makeText(this, "Error while writing to Spreadsheet.", Toast.LENGTH_LONG).show()
+            }) {
+            override fun getParams(): MutableMap<String, String> {
+                var params = HashMap<String, String>()
+
+                params.put("action", "getDetails")
+                params.put("id", id.toString())
+
+                return params
+            }
+        }
+        requestQueue.add(stringRequest)
+    }
+
     private fun writeToSheets(id: Int, name: String, email: String) {
         val cache = DiskBasedCache(cacheDir, 1024 * 1024)
 
@@ -155,8 +173,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
         val requestQueue = RequestQueue(cache, network).apply {
             start()
         }
-        val url: String = "https://script.google.com/macros/s/AKfycbzLnC6lW5p6erbvn1rK8eu2JzmGZGl8cfVwqagunlvshpeVajYviTgp8eiwGKtGLKk/exec"
-        val stringRequest = object : StringRequest(Request.Method.POST, url, Response.Listener { response ->
+        val stringRequest = object : StringRequest(Request.Method.POST, scriptURL, Response.Listener { response ->
 
         },
         Response.ErrorListener {error ->  
@@ -174,70 +191,6 @@ class BarcodeScannerActivity : AppCompatActivity() {
             }
         }
         requestQueue.add(stringRequest)
-    }
-
-    private fun getName(id: Int): String {
-        val cache = DiskBasedCache(cacheDir, 1024 * 1024)
-
-        val network = BasicNetwork(HurlStack())
-
-        val requestQueue = RequestQueue(cache, network).apply {
-            start()
-        }
-        val url: String = "https://script.google.com/macros/s/AKfycbymQ3_1xt6M9tZKhAhEikeNHp6fkoQtE_dCLHHdm7vj0TWUFauCpwk6-huAfYrFIZM/exec"
-
-
-        var name = ""
-        val stringRequest = object : StringRequest(Request.Method.GET, url, Response.Listener { response ->
-            name = response
-
-        },
-            Response.ErrorListener {error ->
-                Toast.makeText(this, "Error while writing to Spreadsheet.", Toast.LENGTH_LONG).show()
-            }) {
-            override fun getParams(): MutableMap<String, String> {
-                var params = HashMap<String, String>()
-
-                params.put("action", "getName")
-                params.put("id", id.toString())
-
-                return params
-            }
-        }
-        requestQueue.add(stringRequest)
-        return name
-    }
-
-    private fun getEmail(id: Int): String {
-        val cache = DiskBasedCache(cacheDir, 1024 * 1024)
-
-        val network = BasicNetwork(HurlStack())
-
-        val requestQueue = RequestQueue(cache, network).apply {
-            start()
-        }
-        val url: String = "https://script.google.com/macros/s/AKfycbymQ3_1xt6M9tZKhAhEikeNHp6fkoQtE_dCLHHdm7vj0TWUFauCpwk6-huAfYrFIZM/exec"
-
-        var email = ""
-
-        val stringRequest = object : StringRequest(Request.Method.GET, url, Response.Listener { response ->
-            email = response
-
-        },
-            Response.ErrorListener {error ->
-                Toast.makeText(this, "Error while writing to Spreadsheet.", Toast.LENGTH_LONG).show()
-            }) {
-            override fun getParams(): MutableMap<String, String> {
-                var params = HashMap<String, String>()
-
-                params.put("action", "getEmail")
-                params.put("id", id.toString())
-
-                return params
-            }
-        }
-        requestQueue.add(stringRequest)
-        return email
     }
 
     private fun startCamera() {
@@ -283,7 +236,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
         var camera = cameraProvider.bindToLifecycle(this as LifecycleOwner, cameraSelector, analysisUseCase, preview)
     }
 
-    @SuppressLint("UnsafeOptInUsageError")
+    @SuppressLint("UnsafeOptInUsageError", "RestrictedApi")
     private fun analyze(imageProxy: ImageProxy, scanner: BarcodeScanner) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
@@ -300,7 +253,9 @@ class BarcodeScannerActivity : AppCompatActivity() {
                         val rawValue = barcode.rawValue
                         if (rawValue != null) {
                             try {
-                                confirmCheckIn(rawValue.toInt())
+                                Toast.makeText(this, "Searching database...", Toast.LENGTH_LONG).show()
+                                CameraX.unbindAll()
+                                getDetails(rawValue.toInt())
                             } catch(e: NumberFormatException) {
 
                             }
