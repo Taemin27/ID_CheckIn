@@ -64,4 +64,7 @@ dependencies {
 
     // Volley
     implementation 'com.android.volley:volley:1.2.1'
+
+    //Klaxon
+    implementation 'com.beust:klaxon:5.5'
 }

@@ -27,7 +27,9 @@ import com.android.volley.Response
 import com.android.volley.toolbox.BasicNetwork
 import com.android.volley.toolbox.DiskBasedCache
 import com.android.volley.toolbox.HurlStack
+import com.android.volley.toolbox.JsonObjectRequest
 import com.android.volley.toolbox.StringRequest
+import com.android.volley.toolbox.Volley
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.mlkit.vision.barcode.BarcodeScanner
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
@@ -35,6 +37,7 @@ import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.barcode.common.Barcode
 import com.google.mlkit.vision.common.InputImage
 import dev.taemin.id_check_in.databinding.ActivityBarcodeScannerBinding
+import org.json.JSONArray
 import java.util.concurrent.Executors
 
 
@@ -42,11 +45,16 @@ class BarcodeScannerActivity : AppCompatActivity() {
     private lateinit var binding: ActivityBarcodeScannerBinding
     private lateinit var cameraProviderFuture : ListenableFuture<ProcessCameraProvider>
 
-    val scriptURL = "https://script.google.com/macros/s/AKfycbwj9QfAvOu7oX_NmXK9HT_eaBjJci3NZmYmvz7QDcOPqWPa8kepOjwesTvf916TDgA/exec"
+    val scriptURL = "https://script.google.com/macros/s/AKfycbxlv2jKISndLDW4JnPOwWOudd_6m4IKM1BJ6ayclSzq_IPe_y2uca5U-hKf7kFAjaEo/exec"
+    lateinit var dataJSONArray : JSONArray
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivityBarcodeScannerBinding.inflate(layoutInflater)
         setContentView(binding.root)
+
+        Toast.makeText(this, "Fetching data...", Toast.LENGTH_SHORT).show()
+        getData()
+        requestPermission()
 
         // Back button listener
         val btn_back = binding.buttonBack
@@ -55,14 +63,22 @@ class BarcodeScannerActivity : AppCompatActivity() {
         }
         val btn_typeID = binding.buttonTypeID
         btn_typeID.setOnClickListener{
-            typeIDNum()
+            typeIDDialog()
         }
-
-        requestPermission()
     }
 
-    private fun typeIDNum() {
-
+    private fun getData() {
+        val queue = Volley.newRequestQueue(this);
+        val jsonObjectRequest = JsonObjectRequest(Request.Method.GET, scriptURL, null,
+            Response.Listener { response ->
+                dataJSONArray = response.getJSONArray("data")
+                Toast.makeText(this, "Data refreshed", Toast.LENGTH_SHORT).show()
+            },
+            Response.ErrorListener { error ->
+                Toast.makeText(this, "Error while requesting data JSON", Toast.LENGTH_LONG).show()
+            }
+        )
+        queue.add(jsonObjectRequest)
     }
 
     private fun backToMain() {
@@ -71,6 +87,39 @@ class BarcodeScannerActivity : AppCompatActivity() {
 
         }
         startActivity(intent)
+    }
+
+    @SuppressLint("RestrictedApi")
+    private fun typeIDDialog() {
+        val dialogView: View = layoutInflater.inflate(R.layout.activity_typeinid, null)
+        val builder: AlertDialog.Builder = AlertDialog.Builder(dialogView.context)
+
+        builder.setView(dialogView)
+        builder.setCancelable(false)
+        val dialog = builder.create()
+
+        CameraX.unbindAll()
+
+        dialog.show()
+
+        val editText_ID = dialogView.findViewById<EditText>(R.id.editText_idNumber)
+
+        val btn_enter = dialogView.findViewById<Button>(R.id.button_enterID)
+        btn_enter.setOnClickListener {
+            val text = editText_ID.text.toString()
+            if(text == "") {
+                Toast.makeText(this, "Enter your ID first!", Toast.LENGTH_SHORT).show()
+            } else {
+                dialog.dismiss()
+                checkInDialog(text)
+            }
+        }
+
+        val btn_cancel = dialogView.findViewById<Button>(R.id.button_cancelID)
+        btn_cancel.setOnClickListener {
+            startCamera()
+            dialog.dismiss()
+        }
     }
 
     @SuppressLint("RestrictedApi")
@@ -88,9 +137,9 @@ class BarcodeScannerActivity : AppCompatActivity() {
 
         val spref : SharedPreferences = getSharedPreferences("pref", MODE_PRIVATE);
 
-        val editTxt_returnPassword = dialogView.findViewById<EditText>(R.id.editText_inputPassword)
+        val editTxt_returnPassword = dialogView.findViewById<EditText>(R.id.editText_returnPassword)
 
-        val btn_enter = dialogView.findViewById<Button>(R.id.button_enter)
+        val btn_enter = dialogView.findViewById<Button>(R.id.button_enterPassword)
         btn_enter.setOnClickListener {
             if(editTxt_returnPassword.text.toString() == spref.getString("returnPassword", "")) {
                 backToMain()
@@ -101,27 +150,31 @@ class BarcodeScannerActivity : AppCompatActivity() {
             }
         }
 
-        val btn_cancel = dialogView.findViewById<Button>(R.id.button_cancel)
+        val btn_cancel = dialogView.findViewById<Button>(R.id.button_cancelPassword)
         btn_cancel.setOnClickListener {
             startCamera()
             dialog.dismiss()
         }
     }
 
-    private fun checkInDialog(ID: Int, details: String) {
-        val builder: AlertDialog.Builder = AlertDialog.Builder(this)
-        builder.setCancelable(false)
-
-        if(details == "No Match") {
-            builder.setTitle("No Match Found")
-            builder.setMessage("Please try scanning again.")
-
-            builder.setPositiveButton("Rescan", DialogInterface.OnClickListener() { dialog, id ->
-                startCamera()
-            })
+    @SuppressLint("RestrictedApi")
+    private fun checkInDialog(ID: String) {
+        CameraX.unbindAll()
+        var name  = ""
+        var email = ""
+        for(i in 0 until dataJSONArray.length()) {
+            val jsonOBJ = dataJSONArray.getJSONObject(i)
+            if(jsonOBJ.getString("id") == ID) {
+                name = jsonOBJ.getString("name")
+                email = jsonOBJ.getString("email")
+            }
+        }
+        if(name == "" && email == "") {
+            Toast.makeText(this, ID + ": No match found", Toast.LENGTH_LONG).show()
+            startCamera()
         } else {
-            var name = details.split(":")[0]
-            var email = details.split(":")[1]
+            val builder: AlertDialog.Builder = AlertDialog.Builder(this)
+            builder.setCancelable(false)
 
             builder.setTitle("Is this you?")
             builder.setMessage("$name\n" + ID.toString() + "\n$email")
@@ -134,38 +187,14 @@ class BarcodeScannerActivity : AppCompatActivity() {
             builder.setNegativeButton("Rescan", DialogInterface.OnClickListener() { dialog, id ->
                 startCamera()
             })
-        }
 
-        builder.show()
+            builder.show()
+        }
     }
 
-    private fun getDetails(id: Int) {
-        val cache = DiskBasedCache(cacheDir, 1024 * 1024)
-        val network = BasicNetwork(HurlStack())
-        val requestQueue = RequestQueue(cache, network).apply {
-            start()
-        }
 
-        val stringRequest = object : StringRequest(Request.Method.GET, scriptURL, Response.Listener { response ->
-            Toast.makeText(this, response, Toast.LENGTH_LONG).show()
-            //checkInDialog(id, response)
-        },
-            Response.ErrorListener {error ->
-                Toast.makeText(this, "Error while writing to Spreadsheet.", Toast.LENGTH_LONG).show()
-            }) {
-            override fun getParams(): MutableMap<String, String> {
-                var params = HashMap<String, String>()
 
-                params.put("action", "getDetails")
-                params.put("id", id.toString())
-
-                return params
-            }
-        }
-        requestQueue.add(stringRequest)
-    }
-
-    private fun writeToSheets(id: Int, name: String, email: String) {
+    private fun writeToSheets(id: String, name: String, email: String) {
         val cache = DiskBasedCache(cacheDir, 1024 * 1024)
 
         val network = BasicNetwork(HurlStack())
@@ -174,7 +203,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
             start()
         }
         val stringRequest = object : StringRequest(Request.Method.POST, scriptURL, Response.Listener { response ->
-
+            Toast.makeText(this, "Checked-In!", Toast.LENGTH_SHORT).show()
         },
         Response.ErrorListener {error ->  
             Toast.makeText(this, "Error while writing to Spreadsheet.", Toast.LENGTH_LONG).show()
@@ -183,7 +212,7 @@ class BarcodeScannerActivity : AppCompatActivity() {
                 var params = HashMap<String, String>()
 
                 params.put("action", "addItem")
-                params.put("id", id.toString())
+                params.put("id", id)
                 params.put("name", name)
                 params.put("email", email)
 
@@ -201,7 +230,6 @@ class BarcodeScannerActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
     private fun bindCameraUseCases(cameraProvider : ProcessCameraProvider) {
-
         // Setting up the barcode scanner
         val options = BarcodeScannerOptions.Builder().setBarcodeFormats(
             Barcode.FORMAT_CODE_128,
@@ -236,7 +264,8 @@ class BarcodeScannerActivity : AppCompatActivity() {
         var camera = cameraProvider.bindToLifecycle(this as LifecycleOwner, cameraSelector, analysisUseCase, preview)
     }
 
-    @SuppressLint("UnsafeOptInUsageError", "RestrictedApi")
+
+    @SuppressLint("UnsafeOptInUsageError")
     private fun analyze(imageProxy: ImageProxy, scanner: BarcodeScanner) {
         val mediaImage = imageProxy.image
         if (mediaImage != null) {
@@ -253,9 +282,8 @@ class BarcodeScannerActivity : AppCompatActivity() {
                         val rawValue = barcode.rawValue
                         if (rawValue != null) {
                             try {
-                                Toast.makeText(this, "Searching database...", Toast.LENGTH_LONG).show()
-                                CameraX.unbindAll()
-                                getDetails(rawValue.toInt())
+                                checkInDialog(rawValue)
+
                             } catch(e: NumberFormatException) {
 
                             }

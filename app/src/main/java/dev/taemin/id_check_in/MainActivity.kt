@@ -24,7 +24,7 @@ class MainActivity : AppCompatActivity() {
         val btn_launchScanner = findViewById<Button>(R.id.button_launchScanner)
         btn_launchScanner.setOnClickListener {
             if(spref.getString("returnPassword", "") == "") {
-                Toast.makeText(this, "Please set the password first", Toast.LENGTH_LONG).show()
+                Toast.makeText(this, "Please set the password first", Toast.LENGTH_SHORT).show()
             } else {
                 val intent = Intent(this, BarcodeScannerActivity::class.java)
                 intent.apply {
@@ -38,7 +38,7 @@ class MainActivity : AppCompatActivity() {
         btn_setReturnPassword.setOnClickListener {
             editor.putString("returnPassword", text_returnPassword.text.toString())
             editor.apply()
-            Toast.makeText(this, "Return password set!", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, "Return password set!", Toast.LENGTH_SHORT).show()
         }
     }
 }

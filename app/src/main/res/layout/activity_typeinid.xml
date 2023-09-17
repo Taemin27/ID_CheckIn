@@ -19,17 +19,17 @@
             android:id="@+id/textView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Enter the return password:"
+            android:text="Enter your ID number:"
             android:textAppearance="@style/TextAppearance.AppCompat.Large" />
 
         <EditText
-            android:id="@+id/editText_returnPassword"
+            android:id="@+id/editText_idNumber"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:ems="10"
-            android:hint="Return Password"
-            android:inputType="text"
+            android:hint="ID Number"
+            android:inputType="numberPassword"
             android:textColorHint="@color/lightGray" />
 
         <LinearLayout
@@ -54,7 +54,7 @@
                 android:layout_weight="1" />
 
             <Button
-                android:id="@+id/button_cancelPassword"
+                android:id="@+id/button_cancelID"
                 style="@style/Widget.AppCompat.Button.Borderless"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -64,7 +64,7 @@
                 android:textColor="#000000" />
 
             <Button
-                android:id="@+id/button_enterPassword"
+                android:id="@+id/button_enterID"
                 style="@style/Widget.AppCompat.Button"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
